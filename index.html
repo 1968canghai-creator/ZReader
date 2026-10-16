@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>ZReader</title>
+<meta name="description" content="自用电子书阅读器：支持 txt / epub，带连续朗读">
+<meta name="theme-color" content="#f6f1e7">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ZReader">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ========== 书架 ========== -->
+<section id="shelf" class="screen">
+  <header class="bar top">
+    <h1 class="app-title">ZReader</h1>
+    <button id="btn-import" class="btn primary" type="button">导入书籍</button>
+    <input id="file-input" type="file" accept=".txt,.epub,text/plain,application/epub+zip" multiple hidden>
+  </header>
+  <div id="book-list" class="book-list" role="list"></div>
+  <div id="shelf-empty" class="empty hidden">
+    <div class="empty-icon">📖</div>
+    <p>书架还是空的</p>
+    <p class="muted">点右上角「导入书籍」，从「文件」里选择 txt 或 epub。<br>书只保存在这台手机上，不会上传。</p>
+  </div>
+</section>
+
+<!-- ========== 阅读 ========== -->
+<section id="reader" class="screen hidden">
+  <main id="content" class="content" tabindex="-1"></main>
+
+  <header class="bar top reader-bar" id="reader-top">
+    <button id="btn-back" class="btn ghost" type="button">‹ 书架</button>
+    <div id="cur-chapter" class="chapter-title"></div>
+    <div id="progress-text" class="progress-text"></div>
+  </header>
+
+  <footer class="bar bottom reader-bar" id="reader-bottom">
+    <button id="btn-prev" class="btn ghost" type="button">上一章</button>
+    <button id="btn-toc" class="btn ghost" type="button">目录</button>
+    <button id="btn-tts" class="btn ghost" type="button">朗读</button>
+    <button id="btn-settings" class="btn ghost" type="button">设置</button>
+    <button id="btn-next" class="btn ghost" type="button">下一章</button>
+  </footer>
+
+  <!-- 朗读控制条 -->
+  <div id="tts-panel" class="tts-panel hidden">
+    <div class="tts-row">
+      <button id="tts-stop" class="btn round" type="button" title="停止">■</button>
+      <button id="tts-toggle" class="btn round big" type="button" title="暂停/继续">❚❚</button>
+      <div class="tts-rate">
+        <button id="tts-slower" class="btn round small" type="button">−</button>
+        <span id="tts-rate-text">1.0×</span>
+        <button id="tts-faster" class="btn round small" type="button">＋</button>
+      </div>
+    </div>
+    <div class="tts-row">
+      <label class="tts-voice-label" for="tts-voice">声音</label>
+      <select id="tts-voice" class="tts-voice"></select>
+    </div>
+    <div class="tts-hint muted">点任意段落可从那里开始读</div>
+  </div>
+</section>
+
+<!-- ========== 目录抽屉 ========== -->
+<div id="toc" class="drawer hidden" aria-hidden="true">
+  <div class="drawer-backdrop" data-close="toc"></div>
+  <div class="drawer-body">
+    <div class="drawer-head">
+      <strong id="toc-title">目录</strong>
+      <button class="btn ghost" data-close="toc" type="button">关闭</button>
+    </div>
+    <div id="toc-list" class="toc-list"></div>
+  </div>
+</div>
+
+<!-- ========== 设置面板 ========== -->
+<div id="settings" class="sheet hidden" aria-hidden="true">
+  <div class="drawer-backdrop" data-close="settings"></div>
+  <div class="sheet-body">
+    <div class="sheet-row">
+      <span>字号</span>
+      <div class="seg">
+        <button id="font-smaller" class="btn seg-btn" type="button">A−</button>
+        <span id="font-size-text" class="seg-val">19</span>
+        <button id="font-larger" class="btn seg-btn" type="button">A＋</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span>行距</span>
+      <div class="seg" id="line-height-seg">
+        <button class="btn seg-btn" data-lh="1.5" type="button">紧</button>
+        <button class="btn seg-btn" data-lh="1.8" type="button">中</button>
+        <button class="btn seg-btn" data-lh="2.1" type="button">松</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span>字体</span>
+      <div class="seg" id="font-seg">
+        <button class="btn seg-btn" data-font="serif" type="button">宋体</button>
+        <button class="btn seg-btn" data-font="sans" type="button">黑体</button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span>背景</span>
+      <div class="theme-row" id="theme-row">
+        <button class="theme-dot" data-theme="light" style="background:#f6f1e7" type="button" title="纸色"></button>
+        <button class="theme-dot" data-theme="green" style="background:#cfe3cf" type="button" title="护眼"></button>
+        <button class="theme-dot" data-theme="gray" style="background:#e9e9e9" type="button" title="灰白"></button>
+        <button class="theme-dot" data-theme="dark" style="background:#161616" type="button" title="夜间"></button>
+      </div>
+    </div>
+    <div class="sheet-row">
+      <span>翻页方式</span>
+      <div class="seg" id="tap-seg">
+        <button class="btn seg-btn" data-tap="page" type="button">点击翻屏</button>
+        <button class="btn seg-btn" data-tap="scroll" type="button">仅滑动</button>
+      </div>
+    </div>
+    <div class="sheet-foot muted">ZReader <span id="app-version"></span> · 点击正文上/下三分之一翻屏，中间显示菜单</div>
+  </div>
+</div>
+
+<div id="loading" class="loading hidden">
+  <div class="spinner"></div>
+  <div id="loading-text">正在解析…</div>
+</div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
