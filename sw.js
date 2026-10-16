@@ -1,9 +1,9 @@
 // 离线缓存：安装时把应用壳缓存下来，之后优先从缓存读取
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const CACHE = `zreader-${VERSION}`;
 const ASSETS = [
   './', './index.html', './css/style.css',
-  './js/app.js', './js/db.js', './js/parsers.js', './js/tts.js',
+  './js/app.js', './js/db.js', './js/parsers.js', './js/tts.js', './js/github.js',
   './vendor/jszip.min.js', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png',
 ];

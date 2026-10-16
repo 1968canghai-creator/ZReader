@@ -19,6 +19,21 @@
 3. 以后从主屏幕的 ZReader 图标打开，全屏运行。
 4. 把 txt / epub 存到 iPhone 的「文件」app 里（AirDrop、微信"用其他应用打开"、iCloud 云盘都行），然后在 ZReader 里点「导入书籍」选择它们。
 
+## 云端书库 & 进度同步（可选）
+
+书默认只存在导入它的那个浏览器里。想在 PC 和 iPhone 上读同一批书、接着同一个进度读，可以把书放到一个 GitHub 仓库里：
+
+1. 在 GitHub 新建一个仓库，比如 `ZReader-books`，建议选 **Private**（私有），这样书不会被别人看到。
+2. 进入仓库 → **Add file → Upload files**，把 txt / epub 拖进去，点 Commit changes。以后加书也是这样。
+3. 生成一个 Token：GitHub 头像 → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token。
+   - Repository access 选 **Only select repositories** → 选 `ZReader-books`
+   - Permissions → Repository permissions → **Contents** 选 **Read and write**
+   - 生成后复制那串 `github_pat_…`（只显示一次）
+4. 在 ZReader 里点「☁ 书库」→ 填仓库名 `你的用户名/ZReader-books`，文件夹留空，粘贴 Token，勾选「同步阅读进度」→ 测试连接 → 保存。
+5. 每台设备都这样填一次，之后就能从「书库」下载书，阅读进度会自动写到仓库里的 `zreader-progress.json`，换设备打开书会直接跳到上次读的位置。
+
+公开仓库不填 Token 也能下载书，但不能同步进度。
+
 ## 朗读
 
 - 阅读时点屏幕中间调出菜单，点「朗读」，从当前屏幕的第一段开始读。

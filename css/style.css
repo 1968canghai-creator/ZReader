@@ -189,3 +189,29 @@ select { font: inherit; }
 
 .btn:disabled { opacity: 0.35; pointer-events: none; }
 #btn-tts.on { color: var(--accent); font-weight: 700; }
+
+/* ===== 云端书库 ===== */
+.spacer { flex: 1; }
+.small { font-size: 12px; }
+.drawer-head .small { margin-left: 8px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 40%; }
+.sheet-body.tall { max-height: 82vh; display: flex; flex-direction: column; padding-left: 0; padding-right: 0; }
+.sheet-body.tall .drawer-head { padding-left: 18px; }
+.lib-list { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+.lib-item { display: flex; align-items: center; gap: 12px; padding: 12px 18px; border-bottom: 1px solid var(--bar-border); }
+.lib-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 15px; }
+.lib-meta { font-size: 12px; color: var(--muted); }
+.lib-item .btn { background: var(--card); box-shadow: var(--shadow); border-radius: 10px; font-size: 13px; padding: 7px 12px; }
+.lib-item .btn.done { background: none; box-shadow: none; color: var(--muted); }
+.lib-item .btn.primary { background: var(--accent); color: var(--accent-fg); }
+.field { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; font-size: 14px; }
+.field > span { color: var(--muted); font-size: 13px; }
+.field input[type="text"], .field input[type="password"] {
+  font: inherit; font-size: 15px; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid var(--bar-border); background: var(--card); color: var(--fg); outline: none; width: 100%;
+}
+.field.row { flex-direction: row; align-items: center; gap: 10px; }
+.field.row > span { color: var(--fg); font-size: 14px; }
+.field input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+.field-actions { display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px; }
+.sync-status { position: absolute; bottom: calc(var(--sab) + 8px); left: 0; right: 0; text-align: center; font-size: 12px; pointer-events: none; }
+.spin { display: inline-block; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--bar-border); border-top-color: var(--accent); animation: spin 0.8s linear infinite; vertical-align: -2px; margin-right: 4px; }
