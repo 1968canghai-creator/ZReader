@@ -24,7 +24,7 @@
 书默认只存在导入它的那个浏览器里。想在 PC 和 iPhone 上读同一批书、接着同一个进度读，可以把书放到一个 GitHub 仓库里：
 
 1. 在 GitHub 新建一个仓库，比如 `ZReader-books`，建议选 **Private**（私有），这样书不会被别人看到。
-2. 进入仓库 → **Add file → Upload files**，把 txt / epub 拖进去，点 Commit changes。以后加书也是这样。
+2. 进入仓库 → **Add file → Upload files**，把 txt / epub 拖进去，点 Commit changes（网页上传单文件上限 25 MB）。配好 Token 之后，也可以直接在 ZReader 的「书库」面板里点「上传」，不受 25 MB 限制。
 3. 生成一个 Token：GitHub 头像 → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token。
    - Repository access 选 **Only select repositories** → 选 `ZReader-books`
    - Permissions → Repository permissions → **Contents** 选 **Read and write**

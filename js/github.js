@@ -144,3 +144,36 @@ export async function testConnection(cfg) {
   }
   return { count: books.length, canWrite };
 }
+
+// 上传一本书到仓库（用 XHR 以便显示上传进度）。sha 为覆盖已有文件时该文件的 sha
+export function uploadFile(cfg, path, buffer, { sha, message, onProgress } = {}) {
+  if (!cfg.token) return Promise.reject(new Error('上传需要有写权限的 Token'));
+  const bytes = new Uint8Array(buffer);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  const body = { message: message || `上传 ${path}`, content: btoa(bin) };
+  if (sha) body.sha = sha;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open('PUT', `${API}/repos/${cfg.repo}/contents/${encodePath(path)}`);
+    const h = headers(cfg.token);
+    for (const k of Object.keys(h)) xhr.setRequestHeader(k, h[k]);
+    xhr.setRequestHeader('Content-Type', 'application/json');
+    xhr.upload.onprogress = (e) => { if (onProgress && e.lengthComputable) onProgress(e.loaded, e.total); };
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        let out = null;
+        try { out = JSON.parse(xhr.responseText); } catch (_) { /* ignore */ }
+        resolve(out && out.content ? out.content.sha : null);
+      } else if (xhr.status === 409 || xhr.status === 422) {
+        reject(new Error('仓库里已有同名文件且版本不一致，请刷新书库后重试'));
+      } else if (xhr.status === 413) {
+        reject(new Error('文件太大，GitHub 拒绝了这次上传'));
+      } else {
+        reject(new Error(explain({ status: xhr.status })));
+      }
+    };
+    xhr.onerror = () => reject(new Error('网络错误，上传中断'));
+    xhr.send(JSON.stringify(body));
+  });
+}
