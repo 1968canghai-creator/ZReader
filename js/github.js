@@ -31,7 +31,7 @@ function headers(token, accept = 'application/vnd.github+json') {
 function explain(res) {
   if (res.status === 401) return 'Token 无效或已过期';
   if (res.status === 403) return '没有权限（Token 权限不够，或请求次数超限）';
-  if (res.status === 404) return '找不到仓库或文件夹（私有仓库需要 Token）';
+  if (res.status === 404) return '找不到仓库或文件夹：可能仓库还是空的（先上传一本书），或仓库名拼错，私有仓库还需要 Token';
   return `GitHub 返回 ${res.status}`;
 }
 
