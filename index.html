@@ -24,13 +24,13 @@
     <h1 class="app-title">ZReader</h1>
     <button id="btn-library" class="btn ghost" type="button">☁ 书库</button>
     <button id="btn-import" class="btn primary" type="button">导入书籍</button>
-    <input id="file-input" type="file" accept=".txt,.epub,text/plain,application/epub+zip" multiple hidden>
+    <input id="file-input" type="file" accept=".txt,.epub,.md,.markdown,text/plain,text/markdown,application/epub+zip" multiple hidden>
   </header>
   <div id="book-list" class="book-list" role="list"></div>
   <div id="shelf-empty" class="empty hidden">
     <div class="empty-icon">📖</div>
     <p>书架还是空的</p>
-    <p class="muted">点右上角「导入书籍」，从「文件」里选择 txt 或 epub；<br>或者点「书库」，从你的 GitHub 仓库下载。</p>
+    <p class="muted">点右上角「导入书籍」，从「文件」里选择 txt / epub / md；<br>或者点「书库」，从你的 GitHub 仓库下载。</p>
   </div>
   <div id="sync-status" class="sync-status muted hidden"></div>
 </section>
@@ -46,7 +46,7 @@
       <button id="lib-upload" class="btn ghost" type="button">上传</button>
       <button id="lib-settings" class="btn ghost" type="button">设置</button>
       <button class="btn ghost" data-close="library" type="button">关闭</button>
-      <input id="lib-file-input" type="file" accept=".txt,.epub,text/plain,application/epub+zip" multiple hidden>
+      <input id="lib-file-input" type="file" accept=".txt,.epub,.md,.markdown,text/plain,text/markdown,application/epub+zip" multiple hidden>
     </div>
     <div id="lib-list" class="lib-list"></div>
     <div id="lib-empty" class="empty hidden">

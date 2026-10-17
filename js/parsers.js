@@ -296,14 +296,106 @@ export async function parseEpub(buffer) {
   return { title, author, chapters: chapters.flatMap(splitLongChapter) };
 }
 
+/* ---------------- markdown ---------------- */
+
+function stripInline(s) {
+  return s
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, '')                 // 图片
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')              // 链接 → 文字
+    .replace(/<[^>]+>/g, '')                               // HTML 标签
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')                    // 粗体
+    .replace(/(^|[^\w*])\*(?!\s)([^*]+?)\*(?!\w)/g, '$1$2') // 斜体 *x*
+    .replace(/(^|[^\w_])_(?!\s)([^_]+?)_(?!\w)/g, '$1$2')  // 斜体 _x_
+    .replace(/~~(.+?)~~/g, '$1')                           // 删除线
+    .replace(/`([^`]*)`/g, '$1')                           // 行内代码
+    .replace(/\\([\\`*_{}\[\]()#+\-.!>~|])/g, '$1')        // 转义字符
+    .replace(/[\s　]+$/g, '').replace(/^[\s　]+/g, '');
+}
+
+export function parseMarkdown(fileName, buffer) {
+  const text = decodeText(buffer);
+  const title = fileName.replace(/\.[^.]+$/, '').trim() || '未命名';
+  const rawLines = text.split(/\r\n|\r|\n/);
+
+  // 先把行归类：标题 / 空行 / 正文（顺带去掉 markdown 记号）
+  const lines = [];
+  let inFence = false;
+  for (const raw of rawLines) {
+    const line = raw.replace(/\s+$/, '');
+    if (/^\s*(```|~~~)/.test(line)) { inFence = !inFence; continue; }
+    if (inFence) { lines.push({ t: 'p', text: line.trim(), hard: true }); continue; }
+    if (!line.trim()) { lines.push({ t: 'blank' }); continue; }
+    const h = line.match(/^\s{0,3}(#{1,6})\s+(.+?)\s*#*\s*$/);
+    if (h) { lines.push({ t: 'h', level: h[1].length, text: stripInline(h[2]) }); continue; }
+    if (/^\s{0,3}([-*_])(\s*\1){2,}\s*$/.test(line)) { lines.push({ t: 'blank' }); continue; } // 分隔线
+    if (/^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)*\|?\s*$/.test(line)) continue;             // 表格分隔行
+    let body = line.replace(/^\s{0,3}>\s?/, '');                                                // 引用
+    const isItem = /^\s*([-*+]|\d+[.)])\s+/.test(body) || /^\s*\|.*\|\s*$/.test(body);           // 列表项 / 表格行各自成段
+    body = body.replace(/^\s*([-*+]|\d+[.)])\s+/, '');                                          // 列表
+    body = body.replace(/^\s*\|/, '').replace(/\|\s*$/, '').replace(/\s*\|\s*/g, '　');        // 表格
+    lines.push({ t: 'p', text: stripInline(body), hard: isItem });
+  }
+
+  // 下一行紧接着的文字行是否该并成一段：markdown 里是，但很多人写小说时每行一段、不空行
+  const textLines = lines.filter(l => l.t === 'p').length;
+  const blankLines = lines.filter(l => l.t === 'blank').length;
+  const joinLines = textLines > 0 && blankLines / textLines > 0.2;
+
+  // 用出现次数最多的标题级别来分章；更高级别（如 # 卷名）也分章
+  const levelCount = {};
+  for (const l of lines) if (l.t === 'h') levelCount[l.level] = (levelCount[l.level] || 0) + 1;
+  const levels = Object.keys(levelCount).map(Number);
+  let chapterLevel = 0;
+  if (levels.length) {
+    chapterLevel = levels.sort((a, b) => levelCount[b] - levelCount[a] || a - b)[0];
+    // 只有一个顶级标题（书名）时，不要拿它当章节级别
+    if (levelCount[chapterLevel] === 1 && levels.length > 1) chapterLevel = levels.filter(l => l !== chapterLevel).sort((a, b) => levelCount[b] - levelCount[a] || a - b)[0];
+  }
+
+  const chapters = [];
+  let cur = { title: '', paras: [], hs: [] };
+  let buf = '';
+  const flush = () => { if (buf) { cur.paras.push(buf); buf = ''; } };
+  for (const l of lines) {
+    if (l.t === 'blank') { flush(); continue; }
+    if (l.t === 'h') {
+      flush();
+      if (chapterLevel && l.level <= chapterLevel) {
+        if (cur.paras.length) chapters.push(cur);
+        cur = { title: l.text, paras: [], hs: [] };
+      } else if (l.text) {
+        cur.hs.push(cur.paras.length);
+        cur.paras.push(l.text);
+      }
+      continue;
+    }
+    if (!l.text) continue;
+    if (l.hard) { flush(); cur.paras.push(l.text); continue; }
+    if (joinLines && buf) buf += l.text;
+    else { flush(); buf = l.text; }
+  }
+  flush();
+  if (cur.paras.length || !chapters.length) chapters.push(cur);
+
+  if (chapters.length <= 1) {
+    // 没有 markdown 标题：按 txt 的"第X章"规则再试一次
+    const plain = chapters[0].paras.join('\n');
+    const viaTxt = parseTxt(fileName, new TextEncoder().encode(plain).buffer);
+    return { title, author: '', chapters: viaTxt.chapters };
+  }
+  if (!chapters[0].title) chapters[0].title = '开头';
+  return { title, author: '', chapters: chapters.flatMap(splitLongChapter) };
+}
+
 export async function parseFile(file) {
   const name = file.name || '未命名';
   const lower = name.toLowerCase();
   const buffer = await file.arrayBuffer();
   const isEpub = lower.endsWith('.epub') || file.type === 'application/epub+zip' ||
     (new Uint8Array(buffer, 0, 2).join(',') === '80,75' && !lower.endsWith('.txt'));
-  const parsed = isEpub ? await parseEpub(buffer) : parseTxt(name, buffer);
-  parsed.format = isEpub ? 'epub' : 'txt';
+  const isMd = /\.(md|markdown)$/i.test(lower);
+  const parsed = isEpub ? await parseEpub(buffer) : isMd ? parseMarkdown(name, buffer) : parseTxt(name, buffer);
+  parsed.format = isEpub ? 'epub' : isMd ? 'md' : 'txt';
   parsed.chars = parsed.chapters.reduce((n, c) => n + c.paras.reduce((m, p) => m + p.length, 0), 0);
   return parsed;
 }

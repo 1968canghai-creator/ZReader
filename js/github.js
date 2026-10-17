@@ -56,7 +56,7 @@ export async function listBooks(cfg, { signal } = {}) {
   const data = await res.json();
   if (!Array.isArray(data)) throw new Error('书库路径不是文件夹');
   return data
-    .filter(it => it.type === 'file' && /\.(txt|epub)$/i.test(it.name))
+    .filter(it => it.type === 'file' && /\.(txt|epub|md|markdown)$/i.test(it.name))
     .map(it => ({ name: it.name, path: it.path, size: it.size, sha: it.sha }))
     .sort((a, b) => a.name.localeCompare(b.name, 'zh'));
 }
