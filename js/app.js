@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.3.0';
+export const APP_VERSION = '1.3.1';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -536,8 +536,11 @@ function renderLibrary(files) {
   for (const f of files) {
     const id = libraryId(f.path);
     const exists = have.has(id);
-    const btn = el('button', { class: `btn ${exists ? 'done' : 'primary'}`, type: 'button', text: exists ? '已在书架' : '下载' });
-    btn.addEventListener('click', () => downloadToShelf(f, id, btn));
+    const btn = el('button', { class: `btn ${exists ? 'done' : 'primary'}`, type: 'button', text: exists ? '已在书架' : '下载', title: exists ? '点击重新下载并解析（进度保留）' : '' });
+    btn.addEventListener('click', () => {
+      if (btn.classList.contains('done') && !confirm(`《${f.name}》已在书架。要重新下载并解析吗？阅读进度会保留。`)) return;
+      downloadToShelf(f, id, btn);
+    });
     list.append(el('div', { class: 'lib-item' },
       el('div', { class: 'lib-name' }, el('div', { text: f.name }), el('div', { class: 'lib-meta', text: fmtSize(f.size) })),
       btn));
@@ -754,6 +757,10 @@ function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
   navigator.serviceWorker.register('./sw.js').then((reg) => {
+    // 主动检查新版本：启动时查一次，回到前台时再查
+    const check = () => reg.update().catch(() => {});
+    setTimeout(check, 3000);
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
     reg.addEventListener('updatefound', () => {
       const sw = reg.installing;
       if (!sw) return;
