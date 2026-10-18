@@ -111,6 +111,9 @@ select { font: inherit; }
 .content p.speaking { background: var(--hl); border-radius: 6px; box-shadow: 0 0 0 6px var(--hl); }
 .content .chapter-end { text-align: center; margin: 2em 0 1em; color: var(--muted); font-family: var(--font-sans); font-size: 15px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
 .content .chapter-end .btn { background: var(--card); box-shadow: var(--shadow); color: var(--fg); padding: 12px 28px; border-radius: 12px; }
+.content .chapter-nav { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.content .chapter-nav.top { justify-content: flex-start; margin-bottom: 0.6em; }
+.content .chapter-nav.top .btn { background: none; box-shadow: none; color: var(--muted); font-family: var(--font-sans); font-size: 14px; padding: 4px 0; text-align: left; white-space: normal; }
 
 .reader-bar { position: absolute; left: 0; right: 0; z-index: 5; transition: transform 0.22s ease, opacity 0.22s ease; }
 #reader-top { top: 0; }

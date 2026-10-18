@@ -1,5 +1,5 @@
 // 离线缓存：安装时把应用壳缓存下来，之后优先从缓存读取
-const VERSION = '1.4.2';
+const VERSION = '1.4.3';
 const CACHE = `zreader-${VERSION}`;
 const ASSETS = [
   './', './index.html', './css/style.css',

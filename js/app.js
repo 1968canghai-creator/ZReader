@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, deleteFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.4.2';
+export const APP_VERSION = '1.4.3';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -220,18 +220,25 @@ function showChapter(index, para = 0, { keepTTS = false } = {}) {
   // 正文第一段本身就是同名标题（epub 常见）时，不再重复显示一次章节名
   const norm = s => s.replace(/[\s　]+/g, '');
   const firstIsTitle = hs.has(0) && ch.paras.length && norm(ch.paras[0]) === norm(ch.title);
+  if (index > 0) {
+    frag.append(el('div', { class: 'chapter-nav top' },
+      el('button', { class: 'btn', type: 'button', text: `‹ 上一章：${chapterAt(index - 1).title}`, onclick: (e) => { e.stopPropagation(); showChapter(index - 1, 0); } })));
+  }
   if (!firstIsTitle) frag.append(el('h2', { class: 'chapter-head', text: ch.title }));
   ch.paras.forEach((t, i) => {
     frag.append(el('p', { class: hs.has(i) ? 'h' : null, 'data-i': i, text: t }));
   });
   const end = el('div', { class: 'chapter-end' });
+  const row = el('div', { class: 'chapter-nav' });
+  if (index > 0) row.append(el('button', { class: 'btn', type: 'button', text: '‹ 上一章', onclick: (e) => { e.stopPropagation(); showChapter(index - 1, 0); } }));
   if (index + 1 < chapterCount()) {
     end.append(el('div', { text: `本章完 · 下一章：${chapterAt(index + 1).title}` }));
-    end.append(el('button', { class: 'btn', type: 'button', text: '下一章', onclick: (e) => { e.stopPropagation(); showChapter(index + 1, 0); } }));
+    row.append(el('button', { class: 'btn', type: 'button', text: '下一章 ›', onclick: (e) => { e.stopPropagation(); showChapter(index + 1, 0); } }));
   } else {
     end.append(el('div', { text: '全书完' }));
-    end.append(el('button', { class: 'btn', type: 'button', text: '回到书架', onclick: (e) => { e.stopPropagation(); backToShelf(); } }));
+    row.append(el('button', { class: 'btn', type: 'button', text: '回到书架', onclick: (e) => { e.stopPropagation(); backToShelf(); } }));
   }
+  end.append(row);
   frag.append(end);
   content.append(frag);
 
