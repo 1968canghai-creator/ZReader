@@ -32,7 +32,10 @@
     <p>书架还是空的</p>
     <p class="muted">点右上角「导入书籍」，从「文件」里选择 txt / epub / md；<br>或者点「书库」，从你的 GitHub 仓库下载。</p>
   </div>
-  <div id="sync-status" class="sync-status muted hidden"></div>
+  <div class="shelf-foot muted">
+    <div id="sync-status" class="hidden"></div>
+    <div><span id="shelf-version"></span> · <button id="btn-update" class="btn link" type="button">检查更新</button></div>
+  </div>
 </section>
 
 <!-- ========== 云端书库 ========== -->
@@ -43,6 +46,7 @@
       <strong>云端书库</strong>
       <span id="lib-repo" class="muted small"></span>
       <span class="spacer"></span>
+      <button id="lib-refresh" class="btn ghost" type="button">刷新</button>
       <button id="lib-upload" class="btn ghost" type="button">上传</button>
       <button id="lib-settings" class="btn ghost" type="button">设置</button>
       <button class="btn ghost" data-close="library" type="button">关闭</button>

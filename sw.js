@@ -1,5 +1,5 @@
 // 离线缓存：安装时把应用壳缓存下来，之后优先从缓存读取
-const VERSION = '1.4.1';
+const VERSION = '1.4.2';
 const CACHE = `zreader-${VERSION}`;
 const ASSETS = [
   './', './index.html', './css/style.css',
@@ -8,8 +8,16 @@ const ASSETS = [
   './icons/icon-192.png', './icons/icon-512.png', './icons/icon-512-maskable.png', './icons/apple-touch-icon.png',
 ];
 
+// 安装新版本时强制从服务器重新拉取，绕过浏览器 HTTP 缓存，避免把旧文件装进新缓存
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => Promise.all(ASSETS.map(url => fetch(new Request(url, { cache: 'reload' })).then(res => {
+        if (!res.ok) throw new Error(`预缓存失败 ${url}: ${res.status}`);
+        return c.put(url, res);
+      }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 self.addEventListener('activate', (e) => {

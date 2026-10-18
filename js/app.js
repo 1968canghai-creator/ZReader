@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, deleteFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.4.1';
+export const APP_VERSION = '1.4.2';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -473,7 +473,14 @@ async function openLibrary() {
   list.append(el('div', { class: 'lib-item muted' }, el('span', { class: 'spin' }), '正在读取书库…'));
   openOverlay('library');
   try {
-    const files = await listBooks(cloud.cfg);
+    let files = await listBooks(cloud.cfg);
+    // GitHub 列目录偶尔滞后几秒：把刚上传的补进去
+    const now = Date.now();
+    for (const [path, rec] of Object.entries(cloud.recent || {})) {
+      if (now - rec.time < 120e3 && !files.some(x => x.path === path)) files = files.concat([rec.entry]);
+      else if (now - rec.time >= 120e3) delete cloud.recent[path];
+    }
+    files.sort((a, b) => a.name.localeCompare(b.name, 'zh'));
     cloud.files = files;
     renderLibrary(files);
   } catch (e) {
@@ -510,7 +517,9 @@ async function uploadToLibrary(fileList, { openLib = true } = {}) {
       showLoading(`正在解析 ${f.name}…`);
       const parsed = await parseFile(new File([buf], f.name));
       await storeParsed(libraryId(path), parsed, { repo: cloud.cfg.repo, path, sha });
-      cloud.files = (cloud.files || []).filter(x => x.path !== path).concat([{ name: f.name, path, size: f.size, sha }]);
+      const entry = { name: f.name, path, size: f.size, sha };
+      cloud.files = (cloud.files || []).filter(x => x.path !== path).concat([entry]);
+      (cloud.recent = cloud.recent || {})[path] = { entry, time: Date.now() };
       ok++;
     } catch (e) {
       console.error(e);
@@ -523,9 +532,11 @@ async function uploadToLibrary(fileList, { openLib = true } = {}) {
     toast(ok === 1 ? '已上传到书库并加入书架' : `已上传 ${ok} 本到书库并加入书架`);
     await loadShelf({ pull: false });
     if (openLib) openLibrary();
+    else if (!$('#library').classList.contains('hidden')) renderLibrary(cloud.files);
   }
   return true;
 }
+$('#lib-refresh').addEventListener('click', () => openLibrary());
 $('#lib-upload').addEventListener('click', () => {
   if (!cloud.cfg.token) { toast('上传需要在书库设置里填写有写权限的 Token'); return; }
   $('#lib-file-input').click();
@@ -788,14 +799,30 @@ document.addEventListener('visibilitychange', () => {
 window.addEventListener('pagehide', () => { flushProgress(); schedulePush('leave', { keepalive: true }); });
 
 /* ---------------- Service Worker ---------------- */
+let swReg = null;
+async function checkForUpdate(manual) {
+  if (!swReg) { if (manual) toast('这个环境没有启用自动更新，请直接刷新页面'); return; }
+  try {
+    await swReg.update();
+    if (manual && !swReg.installing && !swReg.waiting) toast(`已是最新版本 v${APP_VERSION}`);
+  } catch (_) {
+    if (manual) toast('检查更新失败，请检查网络');
+  }
+}
+$('#btn-update').addEventListener('click', () => checkForUpdate(true));
+
 function registerSW() {
   if (!('serviceWorker' in navigator)) return;
   if (location.protocol !== 'https:' && !/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return;
   navigator.serviceWorker.register('./sw.js').then((reg) => {
+    swReg = reg;
     // 主动检查新版本：启动时查一次，回到前台时再查
-    const check = () => reg.update().catch(() => {});
+    const check = () => checkForUpdate(false);
     setTimeout(check, 3000);
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') check(); });
+    if (reg.waiting && navigator.serviceWorker.controller) {
+      toast('ZReader 有新版本', { sticky: true, actionLabel: '刷新', action: () => location.reload() });
+    }
     reg.addEventListener('updatefound', () => {
       const sw = reg.installing;
       if (!sw) return;
@@ -811,6 +838,7 @@ function registerSW() {
 /* ---------------- 启动 ---------------- */
 async function init() {
   $('#app-version').textContent = `v${APP_VERSION}`;
+  $('#shelf-version').textContent = `ZReader v${APP_VERSION}`;
   applySettings();
   requestPersistentStorage();
   await loadShelf({ pull: true });
