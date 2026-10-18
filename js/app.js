@@ -1,9 +1,9 @@
 import { db, requestPersistentStorage } from './db.js';
 import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
-import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, getJson, putJson, testConnection } from './github.js';
+import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, deleteFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.4.0';
+export const APP_VERSION = '1.4.1';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -554,9 +554,30 @@ function renderLibrary(files) {
       if (btn.classList.contains('done') && !confirm(`《${f.name}》已在书架。要重新下载并解析吗？阅读进度会保留。`)) return;
       downloadToShelf(f, id, btn);
     });
-    list.append(el('div', { class: 'lib-item' },
+    const row = el('div', { class: 'lib-item' },
       el('div', { class: 'lib-name' }, el('div', { text: f.name }), el('div', { class: 'lib-meta', text: fmtSize(f.size) })),
-      btn));
+      btn);
+    if (cloud.cfg.token) {
+      const del = el('button', { class: 'btn del', type: 'button', text: '删除', title: '从仓库里删除这个文件' });
+      del.addEventListener('click', () => deleteFromLibrary(f, row, del));
+      row.append(del);
+    }
+    list.append(row);
+  }
+}
+
+async function deleteFromLibrary(f, row, btn) {
+  if (!confirm(`从书库（仓库）里删除「${f.name}」？\n本机书架上已下载的副本不受影响。`)) return;
+  btn.disabled = true; btn.textContent = '删除中…';
+  try {
+    await deleteFile(cloud.cfg, f.path, f.sha, { message: `删除 ${f.name}` });
+    cloud.files = (cloud.files || []).filter(x => x.path !== f.path);
+    row.remove();
+    if (!cloud.files.length) renderLibrary([]);
+    toast(`已从书库删除「${f.name}」`);
+  } catch (e) {
+    btn.disabled = false; btn.textContent = '删除';
+    toast(`删除失败：${e.message}`);
   }
 }
 

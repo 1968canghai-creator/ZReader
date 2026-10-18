@@ -178,3 +178,13 @@ export function uploadFile(cfg, path, buffer, { sha, message, onProgress } = {})
     xhr.send(JSON.stringify(body));
   });
 }
+
+// 从仓库删除一个文件（需要该文件当前的 sha）
+export async function deleteFile(cfg, path, sha, { message } = {}) {
+  if (!cfg.token) throw new Error('删除需要有写权限的 Token');
+  const url = `${API}/repos/${cfg.repo}/contents/${encodePath(path)}`;
+  const res = await request(url, { token: cfg.token, method: 'DELETE', body: { message: message || `删除 ${path}`, sha } });
+  if (res.status === 409 || res.status === 422) throw new Error('文件版本不一致，请刷新书库后重试');
+  if (!res.ok) throw new Error(explain(res));
+  return true;
+}

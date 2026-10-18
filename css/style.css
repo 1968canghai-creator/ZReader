@@ -203,6 +203,7 @@ select { font: inherit; }
 .lib-item .btn { background: var(--card); box-shadow: var(--shadow); border-radius: 10px; font-size: 13px; padding: 7px 12px; }
 .lib-item .btn.done { background: none; box-shadow: none; color: var(--muted); }
 .lib-item .btn.primary { background: var(--accent); color: var(--accent-fg); }
+.lib-item .btn.del { background: none; box-shadow: none; color: var(--muted); padding: 7px 4px; }
 .field { display: flex; flex-direction: column; gap: 6px; padding: 8px 0; font-size: 14px; }
 .field > span { color: var(--muted); font-size: 13px; }
 .field input[type="text"], .field input[type="password"] {
