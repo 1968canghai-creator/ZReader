@@ -4,11 +4,12 @@
 const API = 'https://api.github.com';
 
 export function normalizeCloudConfig(raw) {
-  const cfg = Object.assign({ repo: '', folder: '', token: '', sync: true }, raw || {});
+  const cfg = Object.assign({ repo: '', folder: '', token: '', sync: true, autoUpload: true }, raw || {});
   cfg.repo = String(cfg.repo || '').trim().replace(/^https?:\/\/github\.com\//i, '').replace(/\.git$/, '').replace(/^\/+|\/+$/g, '');
   cfg.folder = String(cfg.folder || '').trim().replace(/^\/+|\/+$/g, '');
   cfg.token = String(cfg.token || '').trim();
   cfg.sync = !!cfg.sync;
+  cfg.autoUpload = !!cfg.autoUpload;
   return cfg;
 }
 

@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.3.1';
+export const APP_VERSION = '1.4.0';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -144,9 +144,15 @@ async function storeParsed(id, parsed, source) {
   return book;
 }
 
+function canAutoUpload() { return !!(cloud.cfg.repo && cloud.cfg.token && cloud.cfg.autoUpload); }
+
 async function importFiles(files) {
   const arr = Array.from(files || []);
   if (!arr.length) return;
+  if (canAutoUpload()) {
+    const done = await uploadToLibrary(arr, { openLib: false });
+    if (done) return;           // 已上传并入架；连不上书库时回落到本地导入
+  }
   let ok = 0;
   for (const f of arr) {
     showLoading(`正在解析 ${f.name}…`);
@@ -162,7 +168,7 @@ async function importFiles(files) {
   }
   hideLoading();
   await loadShelf();
-  if (ok) toast(ok === 1 ? '导入成功' : `已导入 ${ok} 本`);
+  if (ok) toast(ok === 1 ? (canAutoUpload() ? '书库连不上，已只导入到本机' : '导入成功') : `已导入 ${ok} 本`);
 }
 
 /* ---------------- 阅读 ---------------- */
@@ -478,10 +484,15 @@ async function openLibrary() {
   }
 }
 
-async function uploadToLibrary(fileList) {
+async function uploadToLibrary(fileList, { openLib = true } = {}) {
   const files = Array.from(fileList || []);
-  if (!files.length) return;
-  if (!cloud.cfg.token) { toast('上传需要在书库设置里填写有写权限的 Token'); return; }
+  if (!files.length) return false;
+  if (!cloud.cfg.token) { toast('上传需要在书库设置里填写有写权限的 Token'); return false; }
+  if (!cloud.files) {
+    showLoading('正在连接书库…');
+    try { cloud.files = await listBooks(cloud.cfg); }
+    catch (e) { hideLoading(); console.warn('书库不可用', e); return false; }
+  }
   let ok = 0;
   for (const f of files) {
     const path = cloud.cfg.folder ? `${cloud.cfg.folder}/${f.name}` : f.name;
@@ -499,6 +510,7 @@ async function uploadToLibrary(fileList) {
       showLoading(`正在解析 ${f.name}…`);
       const parsed = await parseFile(new File([buf], f.name));
       await storeParsed(libraryId(path), parsed, { repo: cloud.cfg.repo, path, sha });
+      cloud.files = (cloud.files || []).filter(x => x.path !== path).concat([{ name: f.name, path, size: f.size, sha }]);
       ok++;
     } catch (e) {
       console.error(e);
@@ -508,10 +520,11 @@ async function uploadToLibrary(fileList) {
   }
   hideLoading();
   if (ok) {
-    toast(ok === 1 ? '已上传并加入书架' : `已上传 ${ok} 本并加入书架`);
+    toast(ok === 1 ? '已上传到书库并加入书架' : `已上传 ${ok} 本到书库并加入书架`);
     await loadShelf({ pull: false });
-    openLibrary();
+    if (openLib) openLibrary();
   }
+  return true;
 }
 $('#lib-upload').addEventListener('click', () => {
   if (!cloud.cfg.token) { toast('上传需要在书库设置里填写有写权限的 Token'); return; }
@@ -578,12 +591,13 @@ function openCloudSettings() {
   $('#cloud-folder').value = c.folder || '';
   $('#cloud-token').value = c.token;
   $('#cloud-sync').checked = !!c.sync;
+  $('#cloud-auto').checked = !!c.autoUpload;
   openOverlay('cloud');
 }
 function readCloudForm() {
   return normalizeCloudConfig({
     repo: $('#cloud-repo').value, folder: $('#cloud-folder').value,
-    token: $('#cloud-token').value, sync: $('#cloud-sync').checked,
+    token: $('#cloud-token').value, sync: $('#cloud-sync').checked, autoUpload: $('#cloud-auto').checked,
   });
 }
 $('#btn-library').addEventListener('click', openLibrary);
@@ -592,7 +606,7 @@ $('#cloud-save').addEventListener('click', async () => {
   const cfg = readCloudForm();
   saveCloudConfig(cfg);
   cloud.cfg = loadCloudConfig();
-  cloud.remote = null; cloud.sha = null; cloud.failedOnce = false;
+  cloud.remote = null; cloud.sha = null; cloud.failedOnce = false; cloud.files = null;
   closeOverlay('cloud');
   toast('已保存');
   if (cloud.cfg.repo) {
