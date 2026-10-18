@@ -10,7 +10,7 @@
 - 书只保存在手机本地（浏览器的 IndexedDB），不会上传到任何地方
 - 离线可用（Service Worker 缓存）
 
-在线地址：`https://1968canghai-creator.github.io/ZReader/`
+在线地址：`https://zreader.zenkey.info`（Cloudflare Pages，连接本仓库自动部署；备用：`https://zreader.pages.dev`）
 
 ## 第一次使用（iPhone）
 
@@ -49,8 +49,8 @@
 
 ## 部署 / 更新
 
-本项目是纯静态页面，放在 GitHub Pages 上。仓库 Settings → Pages → Source 选 `Deploy from a branch`，Branch 选 `main` / `(root)`，保存后一两分钟即可访问。
-之后每次 push 到 main，GitHub 会自动重新发布；手机上打开 ZReader 时若有新版本，会弹出"刷新"提示。
+本项目是纯静态页面，由 Cloudflare Pages 连接本仓库自动部署（Build command 留空，输出目录 `/`），自定义域名 zreader.zenkey.info。
+每次 push 到 main 会自动重新发布；手机上打开 ZReader 时若有新版本，会弹出"刷新"提示。GitHub Pages 的旧地址仍可访问，但浏览器存储与新域名互不相通，建议只用新域名。
 
 ## 目录结构
 
