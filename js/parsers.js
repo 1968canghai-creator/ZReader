@@ -88,8 +88,8 @@ export function parseTxt(fileName, buffer) {
   }
   if (cur.paras.length || !chapters.length) chapters.push(cur);
 
-  // 识别到的章节太少（基本没有标记）就按长度切块
-  const looksUnsplit = chapters.length <= 1 || totalChars / chapters.length > MAX_CHAPTER_CHARS * 2;
+  // 完全没有章节标记才按长度切块；哪怕只识别出一个章名也要保留
+  const looksUnsplit = !chapters.some(c => c.title);
   if (looksUnsplit) {
     const allParas = chapters.flatMap(c => (c.title ? [c.title] : []).concat(c.paras));
     chapters = [];
@@ -103,6 +103,7 @@ export function parseTxt(fileName, buffer) {
       }
     }
     if (chunk.length) chapters.push({ title: `第 ${chapters.length + 1} 部分`, paras: chunk, hs: [] });
+    if (chapters.length === 1) chapters[0].title = title;   // 只有一块就用书名，不叫"第 1 部分"
   } else {
     if (!chapters[0].title) chapters[0].title = '开头';
     chapters = chapters.flatMap(splitLongChapter);
@@ -377,8 +378,8 @@ export function parseMarkdown(fileName, buffer) {
   flush();
   if (cur.paras.length || !chapters.length) chapters.push(cur);
 
-  if (chapters.length <= 1) {
-    // 没有 markdown 标题：按 txt 的"第X章"规则再试一次
+  if (!chapterLevel) {
+    // 完全没有 markdown 标题：按 txt 的"第X章"规则再试一次
     const plain = chapters[0].paras.join('\n');
     const viaTxt = parseTxt(fileName, new TextEncoder().encode(plain).buffer);
     return { title, author: '', chapters: viaTxt.chapters };

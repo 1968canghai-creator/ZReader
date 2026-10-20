@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, deleteFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.4.3';
+export const APP_VERSION = '1.4.4';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
