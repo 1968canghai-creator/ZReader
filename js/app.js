@@ -3,7 +3,7 @@ import { parseFile, parseTxt, parseEpub } from './parsers.js';
 import { createTTS } from './tts.js';
 import { loadCloudConfig, saveCloudConfig, normalizeCloudConfig, listBooks, downloadBook, uploadFile, deleteFile, getJson, putJson, testConnection } from './github.js';
 
-export const APP_VERSION = '1.4.4';
+export const APP_VERSION = '1.4.5';
 
 /* ---------------- 小工具 ---------------- */
 const $ = (sel) => document.querySelector(sel);
@@ -220,10 +220,12 @@ function showChapter(index, para = 0, { keepTTS = false } = {}) {
   // 正文第一段本身就是同名标题（epub 常见）时，不再重复显示一次章节名
   const norm = s => s.replace(/[\s　]+/g, '');
   const firstIsTitle = hs.has(0) && ch.paras.length && norm(ch.paras[0]) === norm(ch.title);
+  const topNav = el('div', { class: 'chapter-nav top' },
+    el('button', { class: 'btn', type: 'button', text: '‹ 书架', onclick: (e) => { e.stopPropagation(); backToShelf(); } }));
   if (index > 0) {
-    frag.append(el('div', { class: 'chapter-nav top' },
-      el('button', { class: 'btn', type: 'button', text: `‹ 上一章：${chapterAt(index - 1).title}`, onclick: (e) => { e.stopPropagation(); showChapter(index - 1, 0); } })));
+    topNav.append(el('button', { class: 'btn', type: 'button', text: `上一章：${chapterAt(index - 1).title}`, onclick: (e) => { e.stopPropagation(); showChapter(index - 1, 0); } }));
   }
+  frag.append(topNav);
   if (!firstIsTitle) frag.append(el('h2', { class: 'chapter-head', text: ch.title }));
   ch.paras.forEach((t, i) => {
     frag.append(el('p', { class: hs.has(i) ? 'h' : null, 'data-i': i, text: t }));
@@ -308,23 +310,24 @@ function setBars(visible) {
   state.barsVisible = visible;
   $('#reader-top').classList.toggle('off', !visible);
   $('#reader-bottom').classList.toggle('off', !visible);
+  $('#side-nav').classList.toggle('off', !visible);
   $('#tts-panel').classList.toggle('shifted', visible);
 }
 
+// 返回 true 表示确实翻动了；false 表示已到边界、没动（交给调用方弹菜单）
 function pageScroll(dir) {
   const step = content.clientHeight - Math.max(40, parseFloat(getComputedStyle(content).fontSize) * settings.lineHeight * 1.5);
   if (dir > 0 && content.scrollTop + content.clientHeight >= content.scrollHeight - 2) {
-    if (state.chapter + 1 < chapterCount()) showChapter(state.chapter + 1, 0, { keepTTS: true });
-    return;
+    // 到本章末尾：往下翻进下一章；已是最后一章则不动
+    if (state.chapter + 1 < chapterCount()) { showChapter(state.chapter + 1, 0, { keepTTS: true }); return true; }
+    return false;
   }
   if (dir < 0 && content.scrollTop <= 0) {
-    if (state.chapter > 0) {
-      showChapter(state.chapter - 1, 0, { keepTTS: true });
-      requestAnimationFrame(() => { content.scrollTop = content.scrollHeight; });
-    }
-    return;
+    // 到本章页首：不再自动跳回上一章（避免误触一路往前翻）；用章首「上一章」或底部菜单翻章
+    return false;
   }
   content.scrollBy({ top: dir * step, behavior: 'auto' });
+  return true;
 }
 
 // 点击正文：朗读时点段落 = 从该段开始读；否则按区域翻屏 / 显示菜单
@@ -337,8 +340,9 @@ content.addEventListener('click', (e) => {
   }
   if (state.barsVisible) { setBars(false); return; }
   const y = e.clientY / window.innerHeight;
-  if (settings.tap === 'page' && y < 0.3) pageScroll(-1);
-  else if (settings.tap === 'page' && y > 0.7) pageScroll(1);
+  // 边界处翻不动时改为弹出菜单，避免页首点击无反应或被误解
+  if (settings.tap === 'page' && y < 0.3) { if (!pageScroll(-1)) setBars(true); }
+  else if (settings.tap === 'page' && y > 0.7) { if (!pageScroll(1)) setBars(true); }
   else setBars(true);
 });
 
@@ -772,6 +776,8 @@ $('#file-input').addEventListener('change', async (e) => {
   e.target.value = '';
 });
 $('#btn-back').addEventListener('click', backToShelf);
+$('#btn-top').addEventListener('click', () => content.scrollTo({ top: 0, behavior: 'smooth' }));
+$('#btn-bottom').addEventListener('click', () => content.scrollTo({ top: content.scrollHeight, behavior: 'smooth' }));
 $('#btn-prev').addEventListener('click', () => { setBars(false); showChapter(state.chapter - 1, 0); });
 $('#btn-next').addEventListener('click', () => { setBars(false); showChapter(state.chapter + 1, 0); });
 $('#btn-toc').addEventListener('click', () => { renderToc(); openOverlay('toc'); });
